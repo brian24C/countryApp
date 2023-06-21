@@ -1,12 +1,38 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Country } from '../interfaces/country';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Country } from '../interfaces/country.interface';
+import { Observable, catchError, map, of, tap } from 'rxjs';
+import { CacheStore } from '../interfaces/cache-store.interface';
+import { Region } from '../interfaces/region.type';
 
 @Injectable({ providedIn: 'root' })
 export class CountriesService {
   private apiUrl: string = 'https://restcountries.com/v3.1';
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.log('ji');
+  }
+
+  public cacheStore: CacheStore = {
+    byCapital: {
+      term: '',
+      countries: [],
+    },
+    byCountries: {
+      term: '',
+      countries: [],
+    },
+    byRegion: {
+      region: undefined,
+      countries: [],
+    },
+  };
+
+  private saveToLocalStorage(): void {}
+  private loadFromLocalStorage(): void {}
+
+  private getCountriesRequest(url: string): Observable<Country[]> {
+    return this.http.get<Country[]>(url).pipe(catchError((error) => of([])));
+  }
 
   searchCountryByAlphaCode(code: string): Observable<Country | null> {
     return this.http.get<Country[]>(`${this.apiUrl}/alpha/${code}`).pipe(
@@ -16,20 +42,23 @@ export class CountriesService {
   }
 
   searchCapital(term: string): Observable<Country[]> {
-    return this.http
-      .get<Country[]>(`${this.apiUrl}/capital/${term}`)
-      .pipe(catchError((error) => of([])));
+    const url = `${this.apiUrl}/capital/${term}`;
+    return this.getCountriesRequest(url).pipe(
+      tap((countries) => (this.cacheStore.byCapital = { term, countries }))
+    );
   }
 
   searchCountry(term: string): Observable<Country[]> {
-    return this.http
-      .get<Country[]>(`${this.apiUrl}/name/${term}`)
-      .pipe(catchError((error) => of([])));
+    const url = `${this.apiUrl}/name/${term}`;
+    return this.getCountriesRequest(url).pipe(
+      tap((countries) => (this.cacheStore.byCountries = { term, countries }))
+    );
   }
 
-  searchRegion(term: string): Observable<Country[]> {
-    return this.http
-      .get<Country[]>(`${this.apiUrl}/region/${term}`)
-      .pipe(catchError((error) => of([])));
+  searchRegion(region: Region): Observable<Country[]> {
+    const url = `${this.apiUrl}/region/${region}`;
+    return this.getCountriesRequest(url).pipe(
+      tap((countries) => (this.cacheStore.byRegion = { region, countries }))
+    );
   }
 }
