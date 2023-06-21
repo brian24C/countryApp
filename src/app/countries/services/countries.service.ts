@@ -9,7 +9,7 @@ import { Region } from '../interfaces/region.type';
 export class CountriesService {
   private apiUrl: string = 'https://restcountries.com/v3.1';
   constructor(private http: HttpClient) {
-    console.log('ji');
+    this.loadFromLocalStorage();
   }
 
   public cacheStore: CacheStore = {
@@ -27,8 +27,14 @@ export class CountriesService {
     },
   };
 
-  private saveToLocalStorage(): void {}
-  private loadFromLocalStorage(): void {}
+  private saveToLocalStorage(): void {
+    localStorage.setItem('cacheStore', JSON.stringify(this.cacheStore));
+  }
+  private loadFromLocalStorage(): void {
+    if (!localStorage.getItem('cacheStore')) return;
+
+    this.cacheStore = JSON.parse(localStorage.getItem('cacheStore')!);
+  }
 
   private getCountriesRequest(url: string): Observable<Country[]> {
     return this.http.get<Country[]>(url).pipe(catchError((error) => of([])));
@@ -44,21 +50,24 @@ export class CountriesService {
   searchCapital(term: string): Observable<Country[]> {
     const url = `${this.apiUrl}/capital/${term}`;
     return this.getCountriesRequest(url).pipe(
-      tap((countries) => (this.cacheStore.byCapital = { term, countries }))
+      tap((countries) => (this.cacheStore.byCapital = { term, countries })),
+      tap(() => this.saveToLocalStorage())
     );
   }
 
   searchCountry(term: string): Observable<Country[]> {
     const url = `${this.apiUrl}/name/${term}`;
     return this.getCountriesRequest(url).pipe(
-      tap((countries) => (this.cacheStore.byCountries = { term, countries }))
+      tap((countries) => (this.cacheStore.byCountries = { term, countries })),
+      tap(() => this.saveToLocalStorage())
     );
   }
 
   searchRegion(region: Region): Observable<Country[]> {
     const url = `${this.apiUrl}/region/${region}`;
     return this.getCountriesRequest(url).pipe(
-      tap((countries) => (this.cacheStore.byRegion = { region, countries }))
+      tap((countries) => (this.cacheStore.byRegion = { region, countries })),
+      tap(() => this.saveToLocalStorage())
     );
   }
 }
